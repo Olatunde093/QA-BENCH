@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>QA Bench — Test Case Generator &amp; Execution Manager</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root{
+    --ink:#0F2438;
+    --ink-2:#16324A;
+    --paper:#F6F4EE;
+    --paper-2:#FFFFFF;
+    --line:#D9D4C6;
+    --teal:#178A76;
+    --teal-dark:#0F6355;
+    --amber:#C77B21;
+    --rust:#B4432E;
+    --slate:#5B6B75;
+    --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:var(--sans);
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  /* ===== Shell ===== */
+  .shell{display:flex;min-height:100vh;}
+  .rail{
+    width:230px;flex:none;background:var(--ink);color:#EDEFEF;
+    display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
+  }
+  .rail-brand{
+    padding:22px 20px 14px;border-bottom:1px solid rgba(255,255,255,.12);
+  }
+  .rail-brand .mark{
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--teal);
+    text-transform:uppercase;
+  }
+  .rail-brand h1{font-size:17px;margin:6px 0 10px;font-weight:700;letter-spacing:-.01em;}
+  .proj-switch{display:flex;gap:6px;}
+  .proj-switch select{
+    flex:1;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.18);
+    border-radius:6px;padding:6px 7px;font-size:12px;
+  }
+  .proj-switch select option{color:#000;}
+  .proj-switch button{
+    all:unset;cursor:pointer;background:var(--teal);color:#fff;border-radius:6px;
+    padding:6px 9px;font-size:14px;line-height:1;font-weight:700;
+  }
+  .proj-switch button:hover{background:var(--teal-dark);}
+  .rail nav{flex:1;padding:10px 10px;display:flex;flex-direction:column;gap:2px;}
+  .rail button.tab{
+    all:unset;cursor:pointer;padding:9px 12px;border-radius:7px;font-size:13px;
+    color:#C9D3D9;display:flex;align-items:center;justify-content:space-between;
+  }
+  .rail button.tab:hover{background:rgba(255,255,255,.06);}
+  .rail button.tab.active{background:var(--teal);color:#fff;font-weight:600;}
+  .rail button.tab .n{
+    font-family:var(--mono);font-size:10.5px;background:rgba(255,255,255,.12);
+    padding:1px 6px;border-radius:20px;color:#DDE6E9;
+  }
+  .rail button.tab.active .n{background:rgba(255,255,255,.25);color:#fff;}
+  .rail-foot{padding:14px 20px 18px;border-top:1px solid rgba(255,255,255,.12);font-size:11px;color:#7E919D;}
+
+  .main{flex:1;min-width:0;padding:30px 40px 60px;max-width:1280px;}
+  .view{display:none;}
+  .view.active{display:block;animation:fade .2s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:none;}}
+
+  h2.title{font-size:22px;margin:0 0 4px;letter-spacing:-.01em;}
+  p.sub{color:var(--slate);font-size:13.5px;margin:0 0 22px;max-width:700px;line-height:1.5;}
+  .cur-proj-banner{
+    display:inline-flex;align-items:center;gap:8px;background:#EAF3F0;color:var(--teal-dark);
+    border:1px solid #CFE6DF;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;
+    margin-bottom:16px;
+  }
+
+  .card{background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:20px 22px;margin-bottom:18px;}
+  .card h3{margin:0 0 12px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-2);}
+
+  textarea, input[type=text], input[type=number], select{
+    font-family:var(--sans);font-size:13.5px;border:1px solid var(--line);border-radius:6px;
+    padding:8px 10px;background:#fff;color:var(--ink);width:100%;
+  }
+  textarea{min-height:150px;resize:vertical;font-family:var(--mono);font-size:12.5px;line-height:1.5;}
+  label.field{display:block;font-size:11.5px;color:var(--slate);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em;}
+  .row{display:flex;gap:14px;flex-wrap:wrap;}
+  .row > div{flex:1;min-width:160px;}
+
+  button.btn{
+    all:unset;cursor:pointer;background:var(--ink);color:#fff;padding:9px 16px;border-radius:6px;
+    font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;
+  }
+  button.btn:hover{background:var(--ink-2);}
+  button.btn.teal{background:var(--teal);}
+  button.btn.teal:hover{background:var(--teal-dark);}
+  button.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);}
+  button.btn.ghost:hover{background:#EFEBE0;}
+  button.btn.danger{background:transparent;color:var(--rust);border:1px solid #E3C4BB;}
+  button.btn.danger:hover{background:#F7E3DE;}
+  button.btn.sm{padding:5px 10px;font-size:12px;}
+  button.btn:disabled{opacity:.4;cursor:not-allowed;}
+
+  table{width:100%;border-collapse:collapse;font-size:12.8px;}
+  thead th{
+    text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--slate);border-bottom:2px solid var(--ink);padding:8px 10px;white-space:nowrap;
+  }
+  tbody td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tbody tr:hover{background:#FBFAF6;}
+  .tc-id, .id-mono{font-family:var(--mono);font-size:11.5px;color:var(--teal-dark);}
+
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid transparent;}
+  .pill.pos{background:#E4F2EC;color:var(--teal-dark);}
+  .pill.neg{background:#F7E3DE;color:var(--rust);}
+  .pill.bnd{background:#FCEFDA;color:var(--amber);}
+  .pill.sec{background:#EDE6F7;color:#5B3E9E;}
+  .pill.gen{background:#EDEFEF;color:var(--slate);}
+
+  .status{font-weight:700;font-size:11.5px;padding:3px 4px;border-left:3px solid;}
+  .status.notrun{border-color:var(--slate);color:var(--slate);}
+  .status.pass{border-color:var(--teal);color:var(--teal-dark);}
+  .status.fail{border-color:var(--rust);color:var(--rust);}
+  .status.blocked{border-color:var(--amber);color:var(--amber);}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
+  .toolbar select, .toolbar input{width:auto;min-width:140px;}
+  .toolbar .grow{flex:1;min-width:200px;}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px;}
+  .stat{background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:16px 18px;}
+  .stat .v{font-size:26px;font-weight:700;letter-spacing:-.02em;}
+  .stat .l{font-size:11.5px;color:var(--slate);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;}
+
+  .empty{padding:40px 20px;text-align:center;color:var(--slate);border:1px dashed var(--line);border-radius:10px;background:#FBFAF6;}
+  .empty b{color:var(--ink);}
+
+  .modal-backdrop{
+    position:fixed;inset:0;background:rgba(15,36,56,.45);display:none;align-items:flex-start;
+    justify-content:center;padding:40px 20px;z-index:50;overflow:auto;
+  }
+  .modal-backdrop.open{display:flex;}
+  .modal{background:#fff;border-radius:12px;max-width:640px;width:100%;padding:26px 28px;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+  .modal h3{margin:0 0 14px;font-size:16px;}
+  .modal .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+  .modal .close{float:right;cursor:pointer;color:var(--slate);font-size:13px;background:none;border:none;}
+
+  .req-row{border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:10px;background:#fff;}
+  .req-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
+  .req-head .txt{flex:1;min-width:240px;}
+  .req-head .txt .rid{font-family:var(--mono);color:var(--teal-dark);font-size:11.5px;}
+  .req-head .txt p{margin:4px 0 0;font-size:13.5px;}
+  .req-ctrl{display:flex;gap:8px;align-items:center;}
+  .req-ctrl input[type=number]{width:64px;}
+  .cat-tag{font-size:10.5px;background:#EFEBE0;color:var(--ink-2);padding:2px 8px;border-radius:5px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;}
+
+  .proj-card{border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:12px;background:#fff;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;}
+  .proj-card.current{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal) inset;}
+  .proj-card .meta{font-size:12px;color:var(--slate);margin-top:4px;}
+  .proj-card .name{font-weight:700;font-size:14.5px;}
+  .proj-card .actions{display:flex;gap:8px;flex-wrap:wrap;}
+
+  .donut-wrap{display:flex;gap:26px;align-items:center;flex-wrap:wrap;}
+  .legend div{display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:6px;}
+  .legend span.sw{width:10px;height:10px;border-radius:2px;display:inline-block;}
+
+  ::selection{background:var(--teal);color:#fff;}
+  code.k{background:#EFEBE0;padding:1px 5px;border-radius:4px;font-family:var(--mono);font-size:11.5px;}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="rail">
+    <div class="rail-brand">
+      <div class="mark">Offline · No AI · No network</div>
+      <h1>QA Bench</h1>
+      <div class="proj-switch">
+        <select id="projSelect"></select>
+        <button id="btnNewProjectQuick" title="New project">+</button>
+      </div>
+    </div>
+    <nav id="tabs"></nav>
+    <div class="rail-foot">Each project keeps its own requirements, test cases and bugs.<br>Export before closing.</div>
+  </div>
+
+  <div class="main">
+
+    <!-- PROJECTS -->
+    <section class="view" id="view-projects">
+      <h2 class="title">Projects</h2>
+      <p class="sub">Every project has its own isolated set of requirements, test cases, execution results and bugs — nothing crosses over. Switch projects any time from the dropdown in the sidebar.</p>
+      <div class="card">
+        <h3>Create a project</h3>
+        <div class="row">
+          <div><label class="field">Project name</label><input type="text" id="newProjName" placeholder="e.g. TRIPS Fee Split, Jiffy Bot, CBN NPS ISO 20022"></div>
+        </div>
+        <div style="margin-top:12px;">
+          <button class="btn teal" id="btnCreateProject">Create project</button>
+        </div>
+      </div>
+      <div id="projList"></div>
+    </section>
+
+    <!-- IMPORT -->
+    <section class="view" id="view-import">
+      <h2 class="title">Import requirements</h2>
+      <div class="cur-proj-banner" id="bannerImport"></div>
+      <p class="sub">Paste requirements one per line — from a BRD, user story list, or CRF. Prefix with an ID like <code class="k">REQ-01:</code> or let the tool number them for you. No AI is used: extraction runs on a keyword rule engine. Requirements are added to the <b>current project only</b>.</p>
+      <div class="card">
+        <h3>Paste text</h3>
+        <textarea id="importText" placeholder="REQ-01: Customer can login using Email and Password
+REQ-02: Customer can search transaction history by date range
+REQ-03: System calculates VAT on international ticket fees
+REQ-04: Customer can upload a supporting document for a dispute claim"></textarea>
+        <div style="margin-top:12px;display:flex;gap:10px;">
+          <button class="btn teal" id="btnExtract">Extract requirements</button>
+          <button class="btn ghost" id="btnLoadSample">Load sample</button>
+          <button class="btn ghost" id="btnClearImport">Clear</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Smart offline engine (what it looks for)</h3>
+        <p class="sub" style="margin-bottom:0;">Each requirement is scanned for keywords and classified into a module category (Authentication, CRUD, Search, Payment, Calculation, Uploads, Date Logic, Access Control, Notifications, API, etc). The engine also pulls out concrete details from the wording itself — field names ("email and password"), numeric limits ("5 attempts", "10%"), and uses them to ground the generated test data and steps. When you ask for more test cases than the base template set, it doesn't repeat itself — it rotates through detected fields and scenario "aspects" (missing, invalid format, boundary, expired, etc.) to keep every case distinct, similar in spirit to what an AI would produce, without needing a network connection or API key.</p>
+      </div>
+    </section>
+
+    <!-- REQUIREMENTS -->
+    <section class="view" id="view-req">
+      <h2 class="title">Requirements</h2>
+      <div class="cur-proj-banner" id="bannerReq"></div>
+      <p class="sub">Review classification, adjust module/feature/category if the rule engine got it wrong, then choose how many test cases to generate per requirement.</p>
+      <div id="reqList"></div>
+    </section>
+
+    <!-- TEST CASES -->
+    <section class="view" id="view-tc">
+      <h2 class="title">Test cases</h2>
+      <div class="cur-proj-banner" id="bannerTc"></div>
+      <p class="sub">Generated test cases for this project only. Click a row to view or edit full detail.</p>
+      <div class="toolbar">
+        <input type="text" id="tcSearch" class="grow" placeholder="Search by title, ID, requirement...">
+        <select id="tcFilterModule"><option value="">All modules</option></select>
+        <select id="tcFilterType"><option value="">All types</option></select>
+        <select id="tcFilterStatus"><option value="">All statuses</option></select>
+        <button class="btn ghost sm" id="btnDedupe">Flag duplicates</button>
+      </div>
+      <div id="tcTableWrap"></div>
+    </section>
+
+    <!-- EXECUTION -->
+    <section class="view" id="view-exec">
+      <h2 class="title">Execution</h2>
+      <div class="cur-proj-banner" id="bannerExec"></div>
+      <p class="sub">Set the execution status for each test case. Marking a case <b>Failed</b> automatically opens a bug pre-populated from the test case.</p>
+      <div class="toolbar">
+        <select id="execFilterModule"><option value="">All modules</option></select>
+        <select id="execFilterStatus"><option value="">All statuses</option></select>
+      </div>
+      <div id="execTableWrap"></div>
+    </section>
+
+    <!-- BUGS -->
+    <section class="view" id="view-bugs">
+      <h2 class="title">Bug dashboard</h2>
+      <div class="cur-proj-banner" id="bannerBugs"></div>
+      <p class="sub">Auto-created whenever a test case is marked Failed. No duplicate bugs are created for the same test case.</p>
+      <div id="bugTableWrap"></div>
+    </section>
+
+    <!-- RTM -->
+    <section class="view" id="view-rtm">
+      <h2 class="title">Requirement Traceability Matrix</h2>
+      <div class="cur-proj-banner" id="bannerRtm"></div>
+      <p class="sub">Requirement → test cases → execution status → linked defects, at a glance.</p>
+      <div id="rtmWrap"></div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section class="view" id="view-dash">
+      <h2 class="title">Dashboard</h2>
+      <div class="cur-proj-banner" id="bannerDash"></div>
+      <p class="sub">Coverage and execution health for this project.</p>
+      <div id="dashWrap"></div>
+    </section>
+
+    <!-- EXPORT -->
+    <section class="view" id="view-export">
+      <h2 class="title">Export</h2>
+      <div class="cur-proj-banner" id="bannerExport"></div>
+      <p class="sub">Everything runs offline — exports are generated locally and downloaded directly, nothing is uploaded anywhere.</p>
+      <div class="card">
+        <h3>Test cases (current project)</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn teal" id="expTcCsv">Export test cases — CSV / Excel</button>
+          <button class="btn ghost" id="expAdoCsv">Export — Azure DevOps import format</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Bugs (current project)</h3>
+        <button class="btn teal" id="expBugCsv">Export bug report — CSV</button>
+      </div>
+      <div class="card">
+        <h3>AI-assisted generation (optional)</h3>
+        <p class="sub" style="margin-bottom:10px;">The "Generate with AI" button on the Requirements tab writes richer, context-aware test cases using a real model, instead of the offline smart engine. Pick a provider and add a key — kept in memory for this session only, sent directly to the provider's API, and never saved to disk, exports, or this file.</p>
+        <div class="row">
+          <div>
+            <label class="field">AI provider</label>
+            <select id="aiProviderSelect">
+              <option value="gemini">Google Gemini — free tier, no card needed (recommended)</option>
+              <option value="anthropic">Anthropic Claude — paid, no ongoing free tier</option>
+            </select>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px;">
+          <div id="geminiKeyRow"><label class="field">Google Gemini API key</label><input type="password" id="geminiKeyInput" placeholder="AIza..."></div>
+          <div id="anthropicKeyRow" style="display:none;"><label class="field">Anthropic API key</label><input type="password" id="apiKeyInput" placeholder="sk-ant-..."></div>
+        </div>
+        <p class="sub" style="margin:8px 0 0;font-size:12px;" id="providerHelp">Get a free Gemini key at <b>aistudio.google.com/apikey</b> — sign in with Google, click "Create API key". No billing setup required.</p>
+        <div style="margin-top:10px;display:flex;gap:10px;align-items:center;">
+          <button class="btn ghost sm" id="btnTestAi">Test AI connection</button>
+          <span id="aiTestStatus" style="font-size:12.5px;color:var(--slate);"></span>
+        </div>
+        <p class="sub" style="margin:10px 0 0;font-size:12px;">Note: this key is used directly from your browser, so anyone with access to this device's browser dev tools could see it while a request is in flight. Don't share a downloaded copy of this file with your key still typed in — re-enter it each session instead.</p>
+      </div>
+      <div class="card">
+        <h3>Project file</h3>
+        <p class="sub" style="margin-bottom:10px;">Save the current project, or every project in this tool, as a JSON file — since this tool doesn't use browser storage, exporting is the only way to keep your work between sessions.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn teal" id="expJsonCurrent">Download current project (.json)</button>
+          <button class="btn ghost" id="expJsonAll">Download all projects (.json)</button>
+          <label class="btn ghost" style="cursor:pointer;">Load project(s) (.json)
+            <input type="file" id="loadJson" accept="application/json" style="display:none;">
+          </label>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal" id="modalBody"></div>
+</div>
+
+<script>
+/* ============================= STATE ============================= */
+function newProject(name){
+  return { name: name || 'Untitled Project', requirements: [], testCases: [], bugs: [], reqSeq:1, tcSeq:1, bugSeq:1 };
+}
+const state = {
+  currentProject: 'proj_1',
+  projects: { 'proj_1': newProject('Default Project') },
+  apiKey: '', // Anthropic key, session-only, never saved to disk or exports
+  geminiKey: '', // Gemini key, session-only, never saved to disk or exports
+  aiProvider: 'gemini'
+};
+function proj(){ return state.projects[state.currentProject]; }
+function projectIds(){ return Object.keys(state.projects); }
+function slug(){ return 'proj_' + Date.now().toString(36) + Math.floor(Math.random()*1000); }
+
+const TABS = [
+  {id:'projects', label:'Projects'},
+  {id:'import', label:'Import'},
+  {id:'req', label:'Requirements'},
+  {id:'tc', label:'Test cases'},
+  {id:'exec', label:'Execution'},
+  {id:'bugs', label:'Bugs'},
+  {id:'rtm', label:'RTM'},
+  {id:'dash', label:'Dashboard'},
+  {id:'export', label:'Export'}
+];
+
+/* ============================= RULE ENGINE ============================= */
+const CATEGORY_RULES = [
+  {cat:'Authentication', kw:['login','log in','password','authenticate','sign in','signin','credential','otp']},
+  {cat:'Payment', kw:['payment','transfer','pay','transaction','debit','credit','nuban','ticket fee','gl ','settlement']},
+  {cat:'Calculation', kw:['calculate','calculation','amount','fee','interest','rate','vat','total','sum','split','commission']},
+  {cat:'Date Logic', kw:['date','expiry','tenure','maturity','deadline','schedule','timeline']},
+  {cat:'Uploads', kw:['upload','attach','document','file','photo','scan']},
+  {cat:'Downloads', kw:['download','export']},
+  {cat:'Search', kw:['search','find','lookup','query','history']},
+  {cat:'Filtering', kw:['filter','sort','narrow']},
+  {cat:'Reports', kw:['report','statement','summary sheet']},
+  {cat:'Workflow', kw:['workflow','maker','checker','approval flow','process step']},
+  {cat:'Approval', kw:['approve','authorize','reject','sign-off','signoff']},
+  {cat:'Notifications', kw:['notify','notification','alert','email','sms','push']},
+  {cat:'API', kw:['api','endpoint','integration','webhook','third-party']},
+  {cat:'Security', kw:['encrypt','secure','token','security','fraud']},
+  {cat:'Access Control', kw:['role','permission','access','privilege','entitlement']},
+  {cat:'System Configuration', kw:['config','setting','parameter','threshold','limit']},
+  {cat:'CRUD', kw:['create','update','delete','edit','add ','remove','modify','register']}
+];
+
+function classify(text){
+  const t = text.toLowerCase();
+  for(const rule of CATEGORY_RULES){
+    if(rule.kw.some(k=>t.includes(k))) return rule.cat;
+  }
+  return 'Business Rules';
+}
+
+function guessModule(text, category){
+  const t = text.toLowerCase();
+  if(t.includes('transfer')||t.includes('payment')) return 'Payments';
+  if(t.includes('login')||t.includes('password')) return 'Authentication';
+  if(t.includes('report')||t.includes('statement')) return 'Reporting';
+  if(t.includes('upload')||t.includes('document')) return 'Document Handling';
+  return category;
+}
+
+/* ---- Lightweight "understanding" layer: pulls concrete field names and
+   numeric constraints straight out of the requirement text, so generated
+   test cases reference the actual thing being tested instead of generic
+   placeholders. No AI involved — just pattern extraction. ---- */
+const STOPWORDS = new Set(['a','an','the','can','to','of','for','by','using','via','with','and','or','is','are','be','on','in','at','it','that','this','from','their','its','user','customer','system','only','shall','should','will','must','not','if']);
+
+function extractFields(text){
+  const lower = text.toLowerCase();
+  let candidates = [];
+  const m = lower.match(/(?:using|via|with|by|entering|enter)\s+([a-z0-9 ,\/]+?)(?:[.,]|\s+(?:and|to|for|so|when)\b|$)/);
+  if(m){
+    candidates = m[1].split(/\s*,\s*|\s+and\s+/).map(s=>s.trim());
+  }
+  if(candidates.length===0){
+    const caps = text.match(/\b([A-Z][a-zA-Z]+(?:\s[A-Z][a-zA-Z]+){0,2})\b/g);
+    if(caps) candidates = caps.map(s=>s.toLowerCase());
+  }
+  candidates = candidates
+    .map(c=>c.replace(/[^a-z0-9 \/]/gi,'').trim())
+    .filter(c=>c.length>1 && c.split(' ').length<=3 && !STOPWORDS.has(c));
+  return [...new Set(candidates)].slice(0,4);
+}
+
+function extractNumbers(text){
+  const out = [];
+  const re = /(\d+(?:\.\d+)?)\s*(%|percent|days?|characters?|attempts?|minutes?|hours?|years?|ngn|₦|\$|naira|times?)?/gi;
+  let m;
+  while((m = re.exec(text))){
+    out.push({ value: m[1], unit: (m[2]||'').trim() });
+  }
+  return out;
+}
+
+function seededIndex(seedStr, mod){
+  let h = 0;
+  for(let i=0;i<seedStr.length;i++){ h = (h*31 + seedStr.charCodeAt(i)) >>> 0; }
+  return mod>0 ? h % mod : 0;
+}
+function pick(arr, seedStr){ return arr[seededIndex(seedStr, arr.length)]; }
+
+// Extra "aspect" flavors used to make counts beyond the base template
+// library feel like distinct, purpose-written cases instead of repeats.
+const ASPECTS = {
+  'Positive': ['an alternate valid format', 'the minimum valid value', 'the maximum valid value', 'a typical repeat scenario'],
+  'Negative': ['the field left missing', 'an invalid format', 'a mismatched type', 'an expired value'],
+  'Boundary': ['exactly at the minimum limit', 'exactly at the maximum limit', 'one unit below the limit', 'one unit above the limit'],
+  'Edge': ['an empty value', 'a null value', 'whitespace-only input', 'unicode/special characters'],
+  'Security': ['an injection attempt', 'an XSS-style payload', 'an oversized payload', 'a replay attempt'],
+  'Business Rule': ['the policy threshold just reached', 'the policy threshold exceeded', 'a documented exception case', 'a grace-period case'],
+  'Regression': ['a repeat run of the same input', 'execution right after a related change', 'execution across two sessions', 'execution after a config reload'],
+  'Access Control': ['the wrong role', 'an expired session', 'a revoked permission', 'cross-tenant access'],
+  '_default': ['a second distinct scenario', 'a third distinct scenario', 'a fourth distinct scenario', 'a fifth distinct scenario']
+};
+
+function injectNumber(str, numbers){
+  if(!numbers || !numbers.length) return str;
+  const n = numbers[0];
+  const label = n.unit ? (n.value + ' ' + n.unit) : n.value;
+  if(/maximum|threshold|limit/i.test(str) && !str.includes(label)){
+    return str.replace(/\b(maximum|threshold|limit)\b/i, m => m + ' (' + label + ')');
+  }
+  return str;
+}
+
+// Template libraries per category, each returns an array of
+// {type, scenario, title, steps, data, expected}
+function templatesFor(category, subject){
+  const S = subject;
+  const lib = {
+    'Authentication': [
+      ['Positive','Valid login','Verify user can log in with valid email and password','Enter registered email and correct password, submit','email: valid, password: correct','User is authenticated and redirected to the dashboard'],
+      ['Negative','Invalid password','Verify system rejects an incorrect password','Enter valid email, incorrect password, submit','email: valid, password: incorrect','Error message shown; user is not logged in'],
+      ['Negative','Unregistered email','Verify system rejects a non-existent account','Enter an email not on record, any password, submit','email: unregistered','Generic invalid-credentials error shown (no account enumeration)'],
+      ['Boundary','Maximum password length','Verify system accepts password at the maximum allowed length','Enter password at max character limit','password: max length','Login succeeds'],
+      ['Edge','Empty email field','Verify system blocks submission with empty email','Leave email blank, submit','email: empty','Validation message: email is required'],
+      ['Security','SQL injection in login field','Verify login form is not vulnerable to SQL injection','Enter SQL injection string in email field, submit',"email: ' OR '1'='1",'Input is rejected/sanitized; no unauthorized access'],
+      ['Business Rule','Account lockout after repeated failures','Verify account locks after configured number of failed attempts','Attempt login with wrong password N times in a row','N = lockout threshold','Account is locked; further attempts blocked with lockout message'],
+      ['Business Rule','Inactive account login','Verify a deactivated account cannot log in','Attempt login using a deactivated account','account status: inactive','Login blocked with an account-inactive message'],
+      ['Regression','Session timeout','Verify an idle session expires after the configured timeout','Log in, remain idle past session timeout, attempt an action','idle time: > timeout','User is logged out and prompted to re-authenticate'],
+      ['Performance','Multiple concurrent login attempts','Verify system handles concurrent login attempts from the same user','Trigger simultaneous login attempts from two devices','concurrent sessions: 2','System handles gracefully per session policy (single or multi-session rule)']
+    ],
+    'Date Logic': [
+      ['Positive','Valid date range','Verify system accepts a valid start/end date range',`Enter a valid from/to date range for ${S}`,'from < to, both valid','Result returned for the specified range'],
+      ['Negative','End date before start date','Verify system rejects an end date earlier than the start date','Enter end date before start date','from > to','Validation error: end date must be after start date'],
+      ['Negative','Invalid date format','Verify system rejects a malformed date','Enter date in an unsupported format','format: DD-MM-YYYY vs expected','Validation error shown'],
+      ['Boundary','Minimum allowed date','Verify system accepts the earliest permitted date','Enter the minimum allowed date','date = system min','Accepted and processed correctly'],
+      ['Boundary','Maximum allowed date','Verify system accepts the latest permitted date','Enter the maximum allowed / future-dated limit','date = system max','Accepted and processed correctly'],
+      ['Edge','Leap year date','Verify system correctly handles 29 February','Enter 29-Feb of a leap year','date: 29/02/2028','Date accepted and calculations remain correct'],
+      ['Edge','Timezone boundary','Verify date handling across a timezone boundary','Submit a transaction near midnight in a non-UTC timezone','tz offset applied','Correct date is recorded per business timezone rule'],
+      ['Business Rule','Future-dated restriction','Verify system blocks a date beyond the allowed future window',`Enter a future date beyond policy for ${S}`,'date > allowed future window','Rejected with policy violation message'],
+      ['Regression','Backdated entry restriction','Verify system blocks entries dated before the allowed backdating window','Enter a date before the backdating limit','date < backdating limit','Rejected with validation message']
+    ],
+    'Uploads': [
+      ['Positive','Valid file upload','Verify a supported file type within size limit uploads successfully',`Upload a valid document for ${S}`,'type: PDF/JPG, size: within limit','File uploads and is attached to the record'],
+      ['Negative','Unsupported file type','Verify system rejects a disallowed file type','Upload a file with an unsupported extension','type: .exe','Rejected with unsupported-file-type message'],
+      ['Boundary','Maximum file size','Verify system accepts a file exactly at the size limit','Upload file at max allowed size','size = max limit','Upload succeeds'],
+      ['Boundary','File exceeds size limit','Verify system rejects a file over the size limit','Upload file 1 unit over the max size','size = max + 1','Rejected with file-too-large message'],
+      ['Edge','Empty file upload','Verify system rejects a 0-byte file','Attempt to upload an empty file','size: 0 bytes','Rejected with invalid-file message'],
+      ['Edge','Duplicate upload','Verify system handles the same file uploaded twice','Upload the same file twice for the same record','duplicate: true','System flags or replaces the duplicate per policy'],
+      ['Security','Malicious file upload','Verify system blocks a file containing malicious content','Attempt upload of a file with executable/malicious payload','file: malicious','Blocked, and the attempt is logged'],
+      ['Regression','Upload interrupted mid-transfer','Verify partial/interrupted uploads do not corrupt the record','Start upload, interrupt network mid-transfer','network: dropped mid-upload','Upload fails cleanly; no partial file is saved']
+    ],
+    'Search': [
+      ['Positive','Exact match search',`Verify searching for ${S} with an exact term returns the correct result`,'Enter the exact known value, submit search','query: exact match','Matching record(s) returned'],
+      ['Positive','Partial match search','Verify a partial keyword returns relevant results','Enter part of a known value','query: partial','Relevant records returned'],
+      ['Negative','No results found','Verify a search with no matches returns an empty-state message','Enter a value with no matching records','query: not found','No-results message shown, no error thrown'],
+      ['Boundary','Single character search','Verify system handles a 1-character query gracefully','Enter a single character as the query','query length: 1','Either results shown or minimum-length message, per spec'],
+      ['Edge','Case sensitivity','Verify search is case-insensitive','Search using mixed/incorrect case','query: MiXeD case','Same results as the correctly-cased query'],
+      ['Edge','Special characters in query','Verify search handles special characters without error','Enter special characters (e.g. %, _, *) in the query','query: special chars','No system error; results or empty-state handled gracefully'],
+      ['Security','SQL injection in search field','Verify search field is not vulnerable to injection','Enter an injection string in the search box',"query: ' ; DROP TABLE --",'Input sanitized; no unauthorized data exposure'],
+      ['Performance','Large result set search','Verify search performs acceptably on a broad query returning many records','Enter a broad query returning a large result set','result count: high','Results paginated/returned within acceptable response time']
+    ],
+    'Calculation': [
+      ['Positive','Standard calculation',`Verify ${S} calculates correctly for a typical value`,'Enter a standard value and trigger the calculation','value: typical, in-range','Correct result computed and displayed'],
+      ['Boundary','Zero value','Verify calculation handles a zero input correctly','Enter 0 as the input value','value: 0','Result is 0 or handled per business rule, no error'],
+      ['Negative','Negative value','Verify system rejects or correctly handles a negative input','Enter a negative value','value: negative','Rejected with validation message, or handled per signed-value rule'],
+      ['Boundary','Decimal precision','Verify calculation rounds correctly to the required decimal places','Enter a value requiring rounding','value: e.g. 100.005','Rounded per the defined rounding rule (e.g. round-half-up, 2dp)'],
+      ['Boundary','Maximum value / overflow','Verify system handles a value at or beyond the maximum limit','Enter the maximum permitted value, then one above it','value: max, max+1','Max accepted; max+1 rejected or capped per policy'],
+      ['Business Rule','Fee/VAT extraction accuracy','Verify the fee or tax component is correctly extracted from the gross amount','Trigger calculation on a gross amount with an inclusive tax component','gross amount incl. tax','Tax/fee component matches the defined formula exactly'],
+      ['Regression','Rounding consistency across re-runs','Verify repeated runs of the same input produce an identical result','Run the same calculation input twice','same input, two runs','Both runs produce an identical output'],
+      ['Edge','Non-numeric input','Verify system rejects non-numeric characters in an amount field','Enter letters/symbols into the amount field','value: "abc"','Validation error, calculation not triggered']
+    ],
+    'CRUD': [
+      ['Positive','Create with valid data',`Verify a new ${S} record can be created with valid data`,'Fill all required fields with valid data, save','all fields valid','Record created successfully and visible in the list'],
+      ['Negative','Missing mandatory field','Verify system blocks save when a required field is empty','Leave a mandatory field blank, attempt to save','required field: empty','Validation error identifies the missing field'],
+      ['Negative','Duplicate record','Verify system prevents creating a duplicate record','Attempt to create a record with an identical unique key','duplicate key','Rejected with a duplicate-record message'],
+      ['Positive','Update existing record','Verify an existing record can be edited and saved','Open an existing record, change a field, save','1 field changed','Change is saved and reflected on reload'],
+      ['Positive','Delete record','Verify a record can be deleted (soft or hard, per policy)','Select a record, confirm delete','record: existing','Record removed/archived per policy; confirmation shown'],
+      ['Boundary','Maximum field length','Verify a text field accepts input up to its maximum length','Enter text at the max character limit for a field','length = max','Saved successfully'],
+      ['Edge','Field length exceeded','Verify a text field rejects input beyond its maximum length','Enter text one character beyond the max limit','length = max+1','Validation error or input truncated per spec'],
+      ['Access Control','Unauthorized action attempt',`Verify a user without permission cannot modify ${S}`,'Attempt create/edit/delete as a user lacking the required role','role: unauthorized','Action blocked with a permission-denied message'],
+      ['Regression','Concurrent edit conflict','Verify system handles two users editing the same record at once','Open the same record in two sessions, save both','concurrent edits: 2','Second save is blocked or merged per conflict-resolution policy']
+    ],
+    'Notifications': [
+      ['Positive','Notification sent on trigger event',`Verify a notification is sent when ${S} occurs`,'Trigger the event, check the recipient channel','event: valid trigger','Notification is received within the expected time window'],
+      ['Negative','No notification for unrelated event','Verify an unrelated event does not trigger a notification','Trigger a different, non-qualifying event','event: non-trigger','No notification is sent'],
+      ['Boundary','Notification at rate limit','Verify notification delivery when the send-rate limit is reached','Trigger notifications up to the configured rate limit','count = rate limit','All notifications up to the limit are delivered'],
+      ['Edge','Invalid recipient contact','Verify system handles a missing/invalid recipient email or number','Trigger the event for a recipient with no valid contact on file','contact: missing/invalid','Failure is logged; no crash, and it is retried or flagged per policy'],
+      ['Business Rule','Opt-out respected','Verify a recipient who opted out does not receive the notification','Trigger the event for an opted-out recipient','opt-out: true','No notification is sent to that recipient'],
+      ['Regression','Duplicate notification suppressed','Verify the same event does not send duplicate notifications','Trigger the same event twice in quick succession','duplicate trigger','Only one notification is delivered'],
+      ['Security','No sensitive data in notification body','Verify the notification does not leak sensitive data','Trigger the event and inspect the notification content','sensitive fields present','Notification masks/omits sensitive details per policy'],
+      ['Performance','Bulk notification dispatch','Verify system handles a bulk batch of notifications without delay','Trigger the event for a large batch of recipients at once','batch size: large','All notifications are queued and delivered within SLA']
+    ],
+    'API': [
+      ['Positive','Valid request returns expected payload',`Verify the ${S} endpoint returns a correct response for a valid request`,'Call the endpoint with a valid, complete payload','valid request payload','200 response with the expected schema and data'],
+      ['Negative','Missing required parameter','Verify the endpoint rejects a request missing a required parameter','Call the endpoint omitting a mandatory field','required param: missing','4xx response with a clear error code/message'],
+      ['Negative','Invalid auth token','Verify the endpoint rejects an invalid or expired token','Call the endpoint with an invalid/expired token','token: invalid/expired','401 Unauthorized response'],
+      ['Boundary','Maximum payload size','Verify the endpoint handles a request at the maximum allowed payload size','Call the endpoint with a payload at the size limit','payload = max size','Request processed successfully'],
+      ['Edge','Malformed JSON body','Verify the endpoint handles a malformed request body gracefully','Send a request with invalid/malformed JSON','body: malformed JSON','400 response with a parse-error message, no server error'],
+      ['Security','Rate limiting enforced','Verify repeated rapid calls are throttled per the rate limit policy','Call the endpoint faster than the allowed rate','calls > rate limit','429 response once the limit is exceeded'],
+      ['Business Rule','Idempotency on retry','Verify a retried request with the same idempotency key does not duplicate the action','Send the same request twice with the same idempotency key','duplicate idempotency key','Second call returns the original result without duplicating the action'],
+      ['Regression','Backward-compatible response schema','Verify the response schema has not broken existing consumers after a change','Call the endpoint and diff response schema against the previous contract','schema comparison','Existing required fields are unchanged; only additive changes present']
+    ],
+    'Access Control': [
+      ['Positive','Authorized role can perform the action',`Verify a user with the correct role can perform ${S}`,'Log in as a user with the required role, attempt the action','role: authorized','Action completes successfully'],
+      ['Negative','Unauthorized role is blocked','Verify a user without the required role cannot perform the action','Log in as a user lacking the required role, attempt the action','role: unauthorized','Action blocked with a permission-denied message'],
+      ['Boundary','Role at the edge of a permission tier','Verify a role with partial/edge permissions behaves per the defined access matrix','Attempt the action as a role with partial permissions','role: partial access','Only the permitted sub-actions succeed; the rest are blocked'],
+      ['Edge','Revoked permission mid-session','Verify access is blocked immediately after a permission is revoked','Revoke the role/permission while the user session is active, retry the action','permission: revoked mid-session','Action is blocked on the next attempt'],
+      ['Security','Privilege escalation attempt','Verify a lower-privilege user cannot escalate access via request tampering','Attempt the action with a tampered role/parameter in the request','role: tampered','Request is rejected; attempt is logged'],
+      ['Business Rule','Maker-checker separation enforced','Verify the same user cannot both initiate and approve the same action','Attempt to approve an action initiated by the same user account','maker = checker','Approval is blocked; requires a different authorized user'],
+      ['Regression','Access matrix unchanged after release','Verify existing role permissions are unaffected by a recent change','Re-test each existing role against the access matrix','all defined roles','Each role behaves exactly as defined in the access matrix'],
+      ['Access Control','Session-based access after logout','Verify access is denied using a session token after logout','Log out, then reuse the previous session token to attempt the action','token: invalidated on logout','Action is blocked; session is no longer valid']
+    ],
+    'Payment': [
+      ['Positive','Valid transfer completes successfully',`Verify a valid ${S} completes and posts correctly`,'Initiate the transfer with valid account, amount, and NUBAN details, confirm','amount: valid, NUBAN: valid','Transfer completes; ledger legs post correctly (debit/credit match)'],
+      ['Negative','Invalid NUBAN format rejected','Verify a malformed NUBAN/account number is rejected before posting','Enter an account number with an invalid NUBAN format, submit','NUBAN: invalid format','Rejected at validation; no posting is attempted'],
+      ['Negative','Insufficient funds blocked','Verify a transfer exceeding available balance is blocked','Attempt a transfer greater than the available account balance','amount > balance','Transaction declined with an insufficient-funds message'],
+      ['Boundary','Transfer at daily limit','Verify a transfer exactly at the configured daily limit succeeds','Initiate a transfer equal to the daily transfer limit','amount = daily limit','Transfer succeeds'],
+      ['Boundary','Transfer exceeding daily limit','Verify a transfer over the daily limit is blocked','Initiate a transfer one unit above the daily transfer limit','amount = daily limit + 1','Transaction declined citing the limit policy'],
+      ['Business Rule','GL postings balance across legs','Verify the sum of all GL legs nets to zero for the transaction','Post the transaction and reconcile all GL leg entries','multi-leg GL posting','Total debits equal total credits across all legs'],
+      ['Business Rule','Duplicate transaction prevented','Verify a second identical transaction within a short window is flagged/blocked','Submit the same transfer twice in quick succession','duplicate transaction','Second attempt is blocked or flagged for review per duplication policy'],
+      ['Regression','Transaction status reconciles after retry','Verify a retried transaction after a timeout does not double-post','Simulate a timeout mid-transaction, then retry the same request','retry after timeout','Only one successful posting exists; no duplicate ledger entries'],
+      ['Security','Unauthorized account access blocked','Verify a user cannot initiate a transfer from an account they do not own or administer','Attempt a transfer from an account outside the user\'s authorized scope','account: unauthorized','Blocked with a permission-denied message; attempt is logged'],
+      ['Edge','Zero-amount transfer handled','Verify a transfer request for a zero amount is rejected','Attempt a transfer with an amount of 0','amount: 0','Rejected with a validation message; no posting occurs']
+    ],
+    '_default': [
+      ['Positive','Standard flow works as expected',`Verify ${S} behaves correctly under normal, expected conditions`,'Execute the requirement with valid, typical input','typical valid input','Expected outcome occurs with no errors'],
+      ['Negative','Invalid input is rejected',`Verify ${S} rejects clearly invalid input`,'Execute with invalid or out-of-policy input','invalid input','System rejects input with a clear message'],
+      ['Boundary','Boundary value handling',`Verify ${S} correctly handles a boundary/limit value`,'Execute at the defined minimum or maximum threshold','value at limit','Handled correctly with no error at the boundary'],
+      ['Edge','Empty/blank input',`Verify ${S} handles empty or missing input gracefully`,'Execute with a blank/empty required field','input: empty','Validation message shown, no system error'],
+      ['Access Control','Unauthorized user attempt',`Verify a user without the correct role cannot perform ${S}`,'Attempt the action as an unauthorized user','role: unauthorized','Action blocked with permission-denied message'],
+      ['Business Rule','Business rule enforcement',`Verify the defined business rule for ${S} is enforced`,'Execute a scenario that should trigger the business rule','rule-triggering input','System enforces the rule and communicates the outcome'],
+      ['Regression','Repeatability of result',`Verify ${S} produces a consistent result on repeat execution`,'Repeat the same action twice with identical input','same input twice','Identical outcome both times'],
+      ['Security','Unauthorized data exposure check',`Verify ${S} does not expose data to unauthorized parties`,'Attempt to access the result/data as a different, unrelated user','different user context','No unauthorized data is exposed']
+    ]
+  };
+  return lib[category] || lib['_default'];
+}
+
+function pad(n, len){ n=String(n); while(n.length<len) n='0'+n; return n; }
+
+function generateTestCases(req, count){
+  const p = proj();
+  const templates = templatesFor(req.category, req.feature || req.module);
+  const fields = extractFields(req.text);
+  const numbers = extractNumbers(req.text);
+  const out = [];
+  for(let i=0;i<count;i++){
+    const t = templates[i % templates.length];
+    const round = Math.floor(i / templates.length); // 0 = base template, 1+ = extra "smart" variants
+    let scenario = t[1], title = t[2], steps = t[3], testData = t[4], expected = t[5];
+
+    // Base pass: splice in any real numeric constraint found in the requirement text
+    testData = injectNumber(testData, numbers);
+    expected = injectNumber(expected, numbers);
+    title = injectNumber(title, numbers);
+
+    if(round > 0){
+      // Beyond the base template set: build a distinct, labeled variant instead
+      // of a literal repeat — rotate through detected fields and scenario aspects.
+      const aspectPool = ASPECTS[t[0]] || ASPECTS['_default'];
+      const aspect = pick(aspectPool, req.id + '|' + t[0] + '|' + round);
+      const field = fields.length ? fields[(i) % fields.length] : null;
+      const tag = field ? (aspect + ' on "' + field + '"') : aspect;
+      scenario = t[1] + ' — ' + tag;
+      title = t[2].replace(/\.$/, '') + ', specifically ' + tag;
+      testData = testData + (field ? ('; field in focus: ' + field) : '') + '; condition: ' + aspect;
+      steps = steps + (field ? (' Focus on the "' + field + '" field.') : '');
+    } else if(fields.length){
+      // Base pass, lightly ground the generic wording in a detected field when it's a natural fit
+      const field = fields[i % fields.length];
+      if(/\ba value\b|\bthe input\b|\ba field\b|\ban input\b/i.test(steps) && (t[0]==='Negative' || t[0]==='Edge' || t[0]==='Boundary')){
+        testData = testData + '; e.g. field: ' + field;
+      }
+    }
+
+    const tcId = 'TC-' + pad(p.tcSeq++, 4);
+    out.push({
+      id: tcId,
+      reqId: req.id,
+      module: req.module,
+      feature: req.feature,
+      scenario: scenario,
+      title: title,
+      description: t[2] + '. Requirement: "' + req.text + '"',
+      preconditions: 'System accessible; test data prepared as specified',
+      priority: t[0]==='Negative'||t[0]==='Security'||t[0]==='Business Rule' ? 'High' : (t[0]==='Positive' ? 'High' : 'Medium'),
+      severity: t[0]==='Security' ? 'Critical' : (t[0]==='Negative'||t[0]==='Business Rule' ? 'Major' : 'Minor'),
+      testType: t[0],
+      testData: testData,
+      steps: steps,
+      expected: expected,
+      actual: '',
+      status: 'Not Run',
+      executedBy: '',
+      executionDate: '',
+      comments: '',
+      automationCandidate: (t[0]==='Positive'||t[0]==='Regression') ? 'Yes' : 'No',
+      source: 'rule'
+    });
+  }
+  return out;
+}
+
+/* ============================= AI-ASSISTED GENERATION ============================= */
+const AI_BATCH_SIZE = 3; // small batches keep each response well within max_tokens
+
+function aiPrompt(req, n){
+  return `You are helping a QA engineer write test cases for a banking/fintech system.
+
+Requirement ID: ${req.id}
+Requirement text: "${req.text}"
+Module: ${req.module}
+Category: ${req.category}
+
+Write exactly ${n} distinct, high-quality test cases for this requirement, covering a mix of positive, negative, boundary, edge, security, and business-rule scenarios as appropriate — do not repeat the same scenario twice. Keep every field SHORT: description and preconditions under 12 words each, steps under 20 words, expected under 15 words. Brevity matters more than completeness here.
+
+Respond with ONLY a raw JSON array (no markdown fences, no prose before or after, no trailing text) of exactly ${n} objects, each with exactly these keys:
+"testType" (one of: Positive, Negative, Boundary, Edge, Security, Business Rule, Access Control, Regression),
+"scenario" (short scenario name, a few words),
+"title" (test case title, must start with "Verify"),
+"description" (short sentence),
+"preconditions" (short sentence),
+"priority" (High, Medium, or Low),
+"severity" (Critical, Major, or Minor),
+"testData" (short example of the input data used),
+"steps" (concise comma-separated steps),
+"expected" (short expected result),
+"automationCandidate" ("Yes" or "No")`;
+}
+
+const ANTHROPIC_MODEL = 'claude-sonnet-4-6';
+const GEMINI_MODEL = 'gemini-2.5-flash';
+
+async function callAI(promptText){
+  const provider = state.aiProvider || 'gemini';
+  return provider === 'anthropic' ? callAnthropic(promptText) : callGemini(promptText);
+}
+
+async function callAnthropic(promptText){
+  const headers = {"Content-Type":"application/json"};
+  const key = (state.apiKey||'').trim();
+  if(key){
+    headers["x-api-key"] = key;
+    headers["anthropic-version"] = "2023-06-01";
+    headers["anthropic-dangerous-direct-browser-access"] = "true";
+  }
+  let resp;
+  try{
+    resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        model: ANTHROPIC_MODEL,
+        max_tokens: 1000,
+        messages: [{ role: "user", content: promptText }]
+      })
+    });
+  }catch(networkErr){
+    throw new Error(key
+      ? 'Network/CORS error reaching the Anthropic API. Check your internet connection and that the key is correct.'
+      : 'No AI connection available. This page needs an Anthropic API key to use AI generation outside Claude.ai — add one under Export → AI-assisted generation.');
+  }
+  if(!resp.ok){
+    if(resp.status===401 || resp.status===403){
+      throw new Error('Authentication failed (' + resp.status + '). ' + (key ? 'Check that your API key is correct and active.' : 'Add a valid Anthropic API key under Export → AI-assisted generation.'));
+    }
+    const errText = await resp.text().catch(()=> '');
+    throw new Error('API request failed (' + resp.status + '). ' + errText.slice(0,200));
+  }
+  const data = await resp.json();
+  const textBlocks = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text);
+  return textBlocks.join('\n');
+}
+
+async function callGemini(promptText){
+  const key = (state.geminiKey||'').trim();
+  if(!key){
+    throw new Error('Add a free Google Gemini API key under Export → AI-assisted generation (get one at aistudio.google.com/apikey — no card needed).');
+  }
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent?key=' + encodeURIComponent(key);
+  let resp;
+  try{
+    resp = await fetch(url, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: promptText }] }],
+        generationConfig: { maxOutputTokens: 1000 }
+      })
+    });
+  }catch(networkErr){
+    throw new Error('Network/CORS error reaching the Gemini API. Check your internet connection and that the key is correct.');
+  }
+  if(!resp.ok){
+    if(resp.status===400 || resp.status===403){
+      throw new Error('Authentication failed (' + resp.status + '). Check that your Gemini API key is correct and active.');
+    }
+    const errText = await resp.text().catch(()=> '');
+    throw new Error('Gemini API request failed (' + resp.status + '). ' + errText.slice(0,200));
+  }
+  const data = await resp.json();
+  const parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
+  return parts.map(p=>p.text||'').join('\n');
+}
+
+// Salvage whatever complete top-level {...} objects we can find, even if the
+// surrounding array got truncated or the model added stray text.
+function extractCompleteObjects(text){
+  const objs = [];
+  let depth = 0, start = -1, inStr = false, esc = false;
+  for(let i=0;i<text.length;i++){
+    const c = text[i];
+    if(inStr){
+      if(esc) esc = false;
+      else if(c==='\\') esc = true;
+      else if(c==='"') inStr = false;
+      continue;
+    }
+    if(c==='"'){ inStr = true; continue; }
+    if(c==='{'){ if(depth===0) start = i; depth++; }
+    else if(c==='}'){
+      depth--;
+      if(depth===0 && start!==-1){
+        const chunk = text.slice(start, i+1);
+        try{ objs.push(JSON.parse(chunk)); }catch(e){ /* skip malformed fragment */ }
+        start = -1;
+      }
+    }
+  }
+  return objs;
+}
+
+function parseAiItems(raw){
+  let cleaned = raw.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```\s*$/,'').trim();
+  try{
+    const start = cleaned.indexOf('[');
+    const end = cleaned.lastIndexOf(']');
+    if(start!==-1 && end!==-1 && end>start){
+      const arr = JSON.parse(cleaned.slice(start, end+1));
+      if(Array.isArray(arr) && arr.length) return arr;
+    }
+  }catch(e){ /* fall through to recovery below */ }
+  const recovered = extractCompleteObjects(cleaned);
+  if(recovered.length) return recovered;
+  throw new Error('The model response could not be parsed as JSON.');
+}
+
+function makeAiTestCase(p, req, it){
+  const tcId = 'TC-' + pad(p.tcSeq++, 4);
+  return {
+    id: tcId,
+    reqId: req.id,
+    module: req.module,
+    feature: req.feature,
+    scenario: it.scenario || it.title || 'AI-generated scenario',
+    title: it.title || ('Verify ' + (it.scenario||'behavior')),
+    description: it.description || (it.title||'') + '. Requirement: "' + req.text + '"',
+    preconditions: it.preconditions || 'System accessible; test data prepared as specified',
+    priority: ['High','Medium','Low'].includes(it.priority) ? it.priority : 'Medium',
+    severity: ['Critical','Major','Minor'].includes(it.severity) ? it.severity : 'Minor',
+    testType: it.testType || 'Positive',
+    testData: it.testData || '',
+    steps: it.steps || '',
+    expected: it.expected || '',
+    actual: '',
+    status: 'Not Run',
+    executedBy: '',
+    executionDate: '',
+    comments: '',
+    automationCandidate: it.automationCandidate==='Yes' ? 'Yes' : 'No',
+    source: 'ai'
+  };
+}
+
+// Tries AI generation batch by batch. If a batch fails even after a smaller
+// retry, it stops calling the API and fills the remaining count with the
+// offline rule engine, so the user always ends up with a full set of test
+// cases and a clear account of what happened.
+async function generateTestCasesAI(req, count, onProgress){
+  const p = proj();
+  const aiCases = [];
+  let remaining = count;
+  let lastError = null;
+
+  while(remaining > 0){
+    let batch = Math.min(AI_BATCH_SIZE, remaining);
+    let items = null;
+    for(let attempt=0; attempt<2 && items===null; attempt++){
+      try{
+        const raw = await callAI(aiPrompt(req, batch));
+        items = parseAiItems(raw);
+      }catch(err){
+        lastError = err;
+        if(attempt===0 && batch>1){ batch = Math.max(1, Math.floor(batch/2)); }
+      }
+    }
+    if(items && items.length){
+      const take = Math.min(batch, items.length, remaining);
+      items.slice(0, take).forEach(it=> aiCases.push(makeAiTestCase(p, req, it)) );
+      remaining -= take;
+      if(onProgress) onProgress(aiCases.length, count);
+    } else {
+      break; // give up on AI for the rest of this requirement
+    }
+  }
+
+  let ruleCases = [];
+  if(remaining > 0){
+    ruleCases = generateTestCases(req, remaining);
+  }
+  return { cases: [...aiCases, ...ruleCases], error: remaining>0 ? lastError : null, aiCount: aiCases.length, total: count };
+}
+
+/* ============================= IMPORT / EXTRACTION ============================= */
+function extractRequirements(raw){
+  const p = proj();
+  const lines = raw.split('\n').map(l=>l.trim()).filter(l=>l.length>2);
+  const added = [];
+  for(const line of lines){
+    let id = null, text = line;
+    const m = line.match(/^([A-Za-z]{2,6}-?\d{1,4})\s*[:\-]\s*(.+)$/);
+    if(m){ id = m[1].toUpperCase(); text = m[2]; }
+    if(!id) id = 'REQ-' + pad(p.reqSeq++, 2);
+    const category = classify(text);
+    const module = guessModule(text, category);
+    added.push({
+      id, text, category, module,
+      feature: text.split(' ').slice(0,4).join(' '),
+      count: 10
+    });
+  }
+  p.requirements.push(...added);
+  return added;
+}
+
+/* ============================= SAMPLE DATA ============================= */
+const SAMPLE = `REQ-01: Customer can log in using email and password
+REQ-02: Customer can search transaction history by date range
+REQ-03: System calculates VAT on international air ticket fees
+REQ-04: Customer can upload a supporting document for a dispute claim
+REQ-05: Only an authorized maker-checker role can approve a GL posting
+REQ-06: System validates NUBAN account number format before a transfer`;
+
+/* ============================= RENDER: PROJECT SWITCHER ============================= */
+function renderProjectSelector(){
+  const sel = document.getElementById('projSelect');
+  sel.innerHTML = projectIds().map(id=>{
+    const p = state.projects[id];
+    return `<option value="${id}" ${id===state.currentProject?'selected':''}>${escapeHtml(p.name)}</option>`;
+  }).join('');
+  sel.onchange = ()=>{ state.currentProject = sel.value; renderAll(); };
+}
+document.getElementById('btnNewProjectQuick').onclick = ()=>{
+  const name = prompt('New project name:');
+  if(!name) return;
+  const id = slug();
+  state.projects[id] = newProject(name);
+  state.currentProject = id;
+  renderAll();
+};
+
+/* ============================= RENDER: PROJECTS TAB ============================= */
+function renderProjectsTab(){
+  const wrap = document.getElementById('projList');
+  wrap.innerHTML = '';
+  projectIds().forEach(id=>{
+    const p = state.projects[id];
+    const isCurrent = id===state.currentProject;
+    const div = document.createElement('div');
+    div.className = 'proj-card' + (isCurrent ? ' current' : '');
+    div.innerHTML = `
+      <div>
+        <div class="name">${escapeHtml(p.name)} ${isCurrent ? '<span class="cat-tag">Current</span>' : ''}</div>
+        <div class="meta">${p.requirements.length} requirement(s) · ${p.testCases.length} test case(s) · ${p.bugs.length} bug(s)</div>
+      </div>
+      <div class="actions">
+        ${!isCurrent ? `<button class="btn teal sm" data-switch="${id}">Switch to</button>` : ''}
+        <button class="btn ghost sm" data-rename="${id}">Rename</button>
+        <button class="btn ghost sm" data-dup="${id}">Duplicate</button>
+        ${projectIds().length>1 ? `<button class="btn danger sm" data-del="${id}">Delete</button>` : ''}
+      </div>
+    `;
+    wrap.appendChild(div);
+  });
+  wrap.querySelectorAll('[data-switch]').forEach(b=> b.onclick = ()=>{ state.currentProject = b.getAttribute('data-switch'); renderAll(); });
+  wrap.querySelectorAll('[data-rename]').forEach(b=> b.onclick = ()=>{
+    const id = b.getAttribute('data-rename');
+    const name = prompt('Rename project:', state.projects[id].name);
+    if(name) state.projects[id].name = name;
+    renderAll();
+  });
+  wrap.querySelectorAll('[data-dup]').forEach(b=> b.onclick = ()=>{
+    const id = b.getAttribute('data-dup');
+    const src = state.projects[id];
+    const newId = slug();
+    state.projects[newId] = JSON.parse(JSON.stringify(src));
+    state.projects[newId].name = src.name + ' (copy)';
+    renderAll();
+  });
+  wrap.querySelectorAll('[data-del]').forEach(b=> b.onclick = ()=>{
+    const id = b.getAttribute('data-del');
+    if(!confirm('Delete project "'+state.projects[id].name+'"? This cannot be undone.')) return;
+    delete state.projects[id];
+    if(state.currentProject===id) state.currentProject = projectIds()[0];
+    renderAll();
+  });
+}
+document.getElementById('btnCreateProject').onclick = ()=>{
+  const nameInput = document.getElementById('newProjName');
+  const name = nameInput.value.trim();
+  if(!name) return;
+  const id = slug();
+  state.projects[id] = newProject(name);
+  state.currentProject = id;
+  nameInput.value = '';
+  renderAll();
+};
+
+/* ============================= RENDER: TABS ============================= */
+let activeTab = 'projects';
+function renderTabs(){
+  const nav = document.getElementById('tabs');
+  nav.innerHTML = '';
+  const p = proj();
+  TABS.forEach(t=>{
+    const b = document.createElement('button');
+    b.className = 'tab' + (t.id===activeTab ? ' active':'');
+    const count = t.id==='req' ? p.requirements.length
+      : t.id==='tc' ? p.testCases.length
+      : t.id==='bugs' ? p.bugs.length
+      : t.id==='projects' ? projectIds().length : null;
+    b.innerHTML = '<span>'+t.label+'</span>' + (count!==null ? '<span class="n">'+count+'</span>' : '');
+    b.onclick = ()=>{ activeTab = t.id; renderAll(); };
+    nav.appendChild(b);
+  });
+}
+function showView(){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+activeTab).classList.add('active');
+}
+function renderBanners(){
+  const label = 'Project: ' + proj().name;
+  ['bannerImport','bannerReq','bannerTc','bannerExec','bannerBugs','bannerRtm','bannerDash','bannerExport'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.textContent = label;
+  });
+}
+
+/* ============================= RENDER: REQUIREMENTS ============================= */
+function renderRequirements(){
+  const p = proj();
+  const wrap = document.getElementById('reqList');
+  if(p.requirements.length===0){
+    wrap.innerHTML = '<div class="empty">No requirements yet in <b>'+escapeHtml(p.name)+'</b>. Go to <b>Import</b> to paste and extract some.</div>';
+    return;
+  }
+  wrap.innerHTML = '';
+  p.requirements.forEach(req=>{
+    const div = document.createElement('div');
+    div.className = 'req-row';
+    const existingCount = p.testCases.filter(tc=>tc.reqId===req.id).length;
+    const aiCount = p.testCases.filter(tc=>tc.reqId===req.id && tc.source==='ai').length;
+    div.innerHTML = `
+      <div class="req-head">
+        <div class="txt">
+          <span class="rid">${req.id}</span> <span class="cat-tag">${req.category}</span>
+          <p>${escapeHtml(req.text)}</p>
+        </div>
+        <div class="req-ctrl">
+          <input type="number" min="1" max="50" value="${req.count}" data-role="count" title="Number of test cases to generate">
+          <button class="btn ghost sm" data-role="gen">${existingCount>0 ? 'Regenerate (smart engine)' : 'Generate (smart engine)'}</button>
+          <button class="btn teal sm" data-role="genai">✦ Generate with AI</button>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:12px;color:var(--slate);">
+        Module: <input type="text" data-role="module" value="${escapeAttr(req.module)}" style="width:160px;display:inline-block;padding:3px 6px;">
+        &nbsp; ${existingCount>0 ? existingCount+' test case(s) generated' + (aiCount>0 ? ' ('+aiCount+' AI)' : '') : 'No test cases generated yet'}
+      </div>
+      <div class="ai-status" data-role="aistatus" style="margin-top:6px;font-size:12px;color:var(--teal-dark);display:none;"></div>
+    `;
+    div.querySelector('[data-role=module]').onchange = e=>{ req.module = e.target.value; };
+    div.querySelector('[data-role=gen]').onclick = ()=>{
+      const n = parseInt(div.querySelector('[data-role=count]').value)||10;
+      req.count = n;
+      p.testCases = p.testCases.filter(tc=>tc.reqId!==req.id); // regenerate = replace
+      const newCases = generateTestCases(req, n);
+      p.testCases.push(...newCases);
+      activeTab='tc'; renderAll();
+    };
+    div.querySelector('[data-role=genai]').onclick = async ()=>{
+      const n = parseInt(div.querySelector('[data-role=count]').value)||10;
+      req.count = n;
+      const btn = div.querySelector('[data-role=genai]');
+      const statusEl = div.querySelector('[data-role=aistatus]');
+      const genBtn = div.querySelector('[data-role=gen]');
+      btn.disabled = true;
+      genBtn.disabled = true;
+      statusEl.style.display = 'block';
+      statusEl.style.color = 'var(--teal-dark)';
+      statusEl.textContent = 'Generating with AI… 0 / ' + n;
+      try{
+        const result = await generateTestCasesAI(req, n, (done,total)=>{
+          statusEl.textContent = 'Generating with AI… ' + done + ' / ' + total;
+        });
+        p.testCases = p.testCases.filter(tc=>tc.reqId!==req.id);
+        p.testCases.push(...result.cases);
+        if(result.error){
+          statusEl.style.color = 'var(--amber)';
+          statusEl.textContent = result.aiCount + ' of ' + n + ' generated with AI; the rest used the offline rule engine because: ' + result.error.message;
+        } else {
+          statusEl.style.color = 'var(--teal-dark)';
+          statusEl.textContent = 'Generated all ' + n + ' test cases with AI.';
+        }
+      }catch(err){
+        statusEl.style.color = 'var(--rust)';
+        statusEl.textContent = 'AI generation failed entirely: ' + err.message;
+      }
+      btn.disabled = false;
+      genBtn.disabled = false;
+      renderTabs();
+    };
+    wrap.appendChild(div);
+  });
+}
+
+/* ============================= RENDER: TEST CASES ============================= */
+function populateFilterOptions(){
+  const p = proj();
+  const modules = [...new Set(p.testCases.map(t=>t.module))];
+  const types = [...new Set(p.testCases.map(t=>t.testType))];
+  const statuses = ['Not Run','Passed','Failed','Blocked','Not Applicable','Deferred'];
+  fillSelect('tcFilterModule', modules); fillSelect('execFilterModule', modules);
+  fillSelect('tcFilterType', types);
+  fillSelect('tcFilterStatus', statuses); fillSelect('execFilterStatus', statuses);
+}
+function fillSelect(id, values){
+  const sel = document.getElementById(id);
+  const current = sel.value;
+  sel.innerHTML = '<option value="">'+sel.options[0].text+'</option>' +
+    values.map(v=>`<option value="${escapeAttr(v)}">${escapeHtml(v)}</option>`).join('');
+  if(values.includes(current)) sel.value = current;
+}
+function pillClass(type){
+  if(type==='Positive') return 'pos';
+  if(type==='Negative'||type==='Business Rule') return 'neg';
+  if(type==='Boundary'||type==='Edge') return 'bnd';
+  if(type==='Security') return 'sec';
+  return 'gen';
+}
+function statusClass(s){
+  if(s==='Passed') return 'pass';
+  if(s==='Failed') return 'fail';
+  if(s==='Blocked') return 'blocked';
+  return 'notrun';
+}
+function renderTestCases(){
+  const p = proj();
+  populateFilterOptions();
+  const search = document.getElementById('tcSearch').value.toLowerCase();
+  const fm = document.getElementById('tcFilterModule').value;
+  const ft = document.getElementById('tcFilterType').value;
+  const fs = document.getElementById('tcFilterStatus').value;
+  let rows = p.testCases.filter(tc=>{
+    if(fm && tc.module!==fm) return false;
+    if(ft && tc.testType!==ft) return false;
+    if(fs && tc.status!==fs) return false;
+    if(search && !(tc.title.toLowerCase().includes(search)||tc.id.toLowerCase().includes(search)||tc.reqId.toLowerCase().includes(search))) return false;
+    return true;
+  });
+  const wrap = document.getElementById('tcTableWrap');
+  if(p.testCases.length===0){
+    wrap.innerHTML = '<div class="empty">No test cases yet in <b>'+escapeHtml(p.name)+'</b>. Generate them from the <b>Requirements</b> tab.</div>';
+    return;
+  }
+  if(rows.length===0){
+    wrap.innerHTML = '<div class="empty">No test cases match the current filters.</div>';
+    return;
+  }
+  let html = '<table><thead><tr><th>ID</th><th>Req</th><th>Module</th><th>Type</th><th>Title</th><th>Priority</th><th>Status</th><th></th></tr></thead><tbody>';
+  rows.forEach(tc=>{
+    html += `<tr>
+      <td class="tc-id">${tc.id}${tc.dup ? ' <span title="Possible duplicate" style="color:var(--amber)">⚠</span>' : ''}</td>
+      <td class="id-mono">${tc.reqId}</td>
+      <td>${escapeHtml(tc.module)}</td>
+      <td><span class="pill ${pillClass(tc.testType)}">${tc.testType}</span> ${tc.source==='ai' ? '<span class="pill" style="background:#EDE6F7;color:#5B3E9E;">✦ AI</span>' : ''}</td>
+      <td>${escapeHtml(tc.title)}</td>
+      <td>${tc.priority}</td>
+      <td><span class="status ${statusClass(tc.status)}">${tc.status}</span></td>
+      <td><button class="btn ghost sm" data-open="${tc.id}">Open</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('[data-open]').forEach(btn=>{
+    btn.onclick = ()=> openTcModal(btn.getAttribute('data-open'));
+  });
+}
+
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+/* ============================= MODAL: TEST CASE DETAIL ============================= */
+function openTcModal(id){
+  const p = proj();
+  const tc = p.testCases.find(t=>t.id===id);
+  if(!tc) return;
+  const modal = document.getElementById('modalBody');
+  modal.innerHTML = `
+    <button class="close" id="modalClose">Close ✕</button>
+    <h3>${tc.id} <span class="cat-tag">${tc.testType}</span> ${tc.source==='ai' ? '<span class="cat-tag" style="background:#EDE6F7;color:#5B3E9E;">✦ AI-generated</span>' : ''}</h3>
+    <div class="grid2">
+      <div><label class="field">Requirement</label><div class="id-mono">${tc.reqId}</div></div>
+      <div><label class="field">Module</label><div>${escapeHtml(tc.module)}</div></div>
+    </div>
+    <label class="field">Title</label>
+    <input type="text" id="mTitle" value="${escapeAttr(tc.title)}">
+    <div style="height:10px"></div>
+    <label class="field">Preconditions</label>
+    <input type="text" id="mPre" value="${escapeAttr(tc.preconditions)}">
+    <div style="height:10px"></div>
+    <label class="field">Steps</label>
+    <textarea id="mSteps" style="min-height:60px;font-family:var(--sans);">${escapeHtml(tc.steps)}</textarea>
+    <div class="grid2" style="margin-top:10px;">
+      <div><label class="field">Test data</label><input type="text" id="mData" value="${escapeAttr(tc.testData)}"></div>
+      <div><label class="field">Expected result</label><input type="text" id="mExpected" value="${escapeAttr(tc.expected)}"></div>
+    </div>
+    <div class="grid2">
+      <div><label class="field">Priority</label>
+        <select id="mPriority"><option ${tc.priority==='High'?'selected':''}>High</option><option ${tc.priority==='Medium'?'selected':''}>Medium</option><option ${tc.priority==='Low'?'selected':''}>Low</option></select>
+      </div>
+      <div><label class="field">Severity</label>
+        <select id="mSeverity"><option ${tc.severity==='Critical'?'selected':''}>Critical</option><option ${tc.severity==='Major'?'selected':''}>Major</option><option ${tc.severity==='Minor'?'selected':''}>Minor</option></select>
+      </div>
+    </div>
+    <div class="grid2">
+      <div><label class="field">Execution status</label>
+        <select id="mStatus">
+          ${['Not Run','Passed','Failed','Blocked','Not Applicable','Deferred'].map(s=>`<option ${tc.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div><label class="field">Executed by</label><input type="text" id="mExecBy" value="${escapeAttr(tc.executedBy)}"></div>
+    </div>
+    <label class="field">Actual result</label>
+    <input type="text" id="mActual" value="${escapeAttr(tc.actual)}">
+    <div style="height:10px"></div>
+    <label class="field">Comments</label>
+    <input type="text" id="mComments" value="${escapeAttr(tc.comments)}">
+    <div style="margin-top:16px;display:flex;gap:10px;">
+      <button class="btn teal" id="mSave">Save changes</button>
+      <button class="btn ghost" id="mDelete" style="color:var(--rust);">Delete test case</button>
+    </div>
+  `;
+  document.getElementById('modalBackdrop').classList.add('open');
+  document.getElementById('modalClose').onclick = closeModal;
+  document.getElementById('mSave').onclick = ()=>{
+    tc.title = document.getElementById('mTitle').value;
+    tc.preconditions = document.getElementById('mPre').value;
+    tc.steps = document.getElementById('mSteps').value;
+    tc.testData = document.getElementById('mData').value;
+    tc.expected = document.getElementById('mExpected').value;
+    tc.priority = document.getElementById('mPriority').value;
+    tc.severity = document.getElementById('mSeverity').value;
+    tc.status = document.getElementById('mStatus').value;
+    tc.executedBy = document.getElementById('mExecBy').value;
+    tc.actual = document.getElementById('mActual').value;
+    tc.comments = document.getElementById('mComments').value;
+    if(tc.status==='Failed'){
+      tc.executionDate = tc.executionDate || new Date().toISOString().slice(0,10);
+      createBugIfNeeded(tc);
+    }
+    closeModal();
+    renderAll();
+  };
+  document.getElementById('mDelete').onclick = ()=>{
+    p.testCases = p.testCases.filter(t=>t.id!==tc.id);
+    closeModal();
+    renderAll();
+  };
+}
+function closeModal(){ document.getElementById('modalBackdrop').classList.remove('open'); }
+document.getElementById('modalBackdrop').addEventListener('click', e=>{
+  if(e.target.id==='modalBackdrop') closeModal();
+});
+
+/* ============================= EXECUTION VIEW ============================= */
+function renderExecution(){
+  const p = proj();
+  const fm = document.getElementById('execFilterModule').value;
+  const fs = document.getElementById('execFilterStatus').value;
+  let rows = p.testCases.filter(tc=>{
+    if(fm && tc.module!==fm) return false;
+    if(fs && tc.status!==fs) return false;
+    return true;
+  });
+  const wrap = document.getElementById('execTableWrap');
+  if(p.testCases.length===0){
+    wrap.innerHTML = '<div class="empty">No test cases to execute yet in <b>'+escapeHtml(p.name)+'</b>.</div>';
+    return;
+  }
+  let html = '<table><thead><tr><th>ID</th><th>Title</th><th>Expected result</th><th>Status</th><th>Actual result</th></tr></thead><tbody>';
+  rows.forEach(tc=>{
+    html += `<tr>
+      <td class="tc-id">${tc.id}</td>
+      <td>${escapeHtml(tc.title)}</td>
+      <td style="max-width:260px;">${escapeHtml(tc.expected)}</td>
+      <td>
+        <select data-exec="${tc.id}" style="width:auto;">
+          ${['Not Run','Passed','Failed','Blocked','Not Applicable','Deferred'].map(s=>`<option ${tc.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td><input type="text" data-actual="${tc.id}" value="${escapeAttr(tc.actual)}" placeholder="Actual result / evidence note" style="min-width:180px;"></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('[data-exec]').forEach(sel=>{
+    sel.onchange = ()=>{
+      const tc = p.testCases.find(t=>t.id===sel.getAttribute('data-exec'));
+      tc.status = sel.value;
+      tc.executionDate = new Date().toISOString().slice(0,10);
+      if(tc.status==='Failed'){
+        if(!tc.actual){
+          const actualInput = wrap.querySelector(`[data-actual="${tc.id}"]`);
+          tc.actual = actualInput.value || 'Result did not match expected outcome';
+          actualInput.value = tc.actual;
+        }
+        createBugIfNeeded(tc);
+      }
+      renderAll();
+    };
+  });
+  wrap.querySelectorAll('[data-actual]').forEach(inp=>{
+    inp.onchange = ()=>{
+      const tc = p.testCases.find(t=>t.id===inp.getAttribute('data-actual'));
+      tc.actual = inp.value;
+    };
+  });
+}
+
+/* ============================= BUGS ============================= */
+function createBugIfNeeded(tc){
+  const p = proj();
+  if(p.bugs.some(b=>b.testCaseId===tc.id)) return; // no duplicate bugs
+  const bug = {
+    id: 'BUG-' + pad(p.bugSeq++, 4),
+    title: 'Failure: ' + tc.title,
+    reqId: tc.reqId,
+    testCaseId: tc.id,
+    module: tc.module,
+    description: tc.description,
+    steps: tc.steps,
+    expected: tc.expected,
+    actual: tc.actual || '(not recorded)',
+    severity: tc.severity,
+    priority: tc.priority,
+    status: 'Open',
+    assignedTo: '',
+    reporter: '',
+    dateReported: new Date().toISOString().slice(0,10)
+  };
+  p.bugs.push(bug);
+}
+function renderBugs(){
+  const p = proj();
+  const wrap = document.getElementById('bugTableWrap');
+  if(p.bugs.length===0){
+    wrap.innerHTML = '<div class="empty">No bugs yet in <b>'+escapeHtml(p.name)+'</b>. Bugs are created automatically when a test case is marked <b>Failed</b>.</div>';
+    return;
+  }
+  let html = '<table><thead><tr><th>ID</th><th>Test case</th><th>Title</th><th>Severity</th><th>Priority</th><th>Status</th><th>Assigned to</th></tr></thead><tbody>';
+  p.bugs.forEach(b=>{
+    html += `<tr>
+      <td class="tc-id">${b.id}</td>
+      <td class="id-mono">${b.testCaseId}</td>
+      <td>${escapeHtml(b.title)}</td>
+      <td>${b.severity}</td>
+      <td>${b.priority}</td>
+      <td>
+        <select data-bugstatus="${b.id}" style="width:auto;">
+          ${['Open','In Progress','Resolved','Rejected','Duplicate','Closed'].map(s=>`<option ${b.status===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </td>
+      <td><input type="text" data-assign="${b.id}" value="${escapeAttr(b.assignedTo)}" style="min-width:120px;"></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('[data-bugstatus]').forEach(sel=>{
+    sel.onchange = ()=>{ p.bugs.find(b=>b.id===sel.getAttribute('data-bugstatus')).status = sel.value; renderAll(); };
+  });
+  wrap.querySelectorAll('[data-assign]').forEach(inp=>{
+    inp.onchange = ()=>{ p.bugs.find(b=>b.id===inp.getAttribute('data-assign')).assignedTo = inp.value; };
+  });
+}
+
+/* ============================= RTM ============================= */
+function renderRtm(){
+  const p = proj();
+  const wrap = document.getElementById('rtmWrap');
+  if(p.requirements.length===0){
+    wrap.innerHTML = '<div class="empty">No requirements yet in <b>'+escapeHtml(p.name)+'</b>.</div>';
+    return;
+  }
+  let html = '<table><thead><tr><th>Requirement</th><th>Category</th><th>Test cases</th><th>Executed</th><th>Passed</th><th>Failed</th><th>Bugs</th><th>Coverage</th></tr></thead><tbody>';
+  p.requirements.forEach(req=>{
+    const tcs = p.testCases.filter(t=>t.reqId===req.id);
+    const executed = tcs.filter(t=>t.status!=='Not Run').length;
+    const passed = tcs.filter(t=>t.status==='Passed').length;
+    const failed = tcs.filter(t=>t.status==='Failed').length;
+    const bugs = p.bugs.filter(b=>b.reqId===req.id).length;
+    const coverage = tcs.length ? Math.round(executed/tcs.length*100) : 0;
+    html += `<tr>
+      <td><span class="id-mono">${req.id}</span><br>${escapeHtml(req.text.slice(0,60))}${req.text.length>60?'…':''}</td>
+      <td><span class="cat-tag">${req.category}</span></td>
+      <td>${tcs.length}</td>
+      <td>${executed}</td>
+      <td style="color:var(--teal-dark);font-weight:700;">${passed}</td>
+      <td style="color:var(--rust);font-weight:700;">${failed}</td>
+      <td>${bugs}</td>
+      <td>${coverage}%</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+/* ============================= DASHBOARD ============================= */
+function renderDash(){
+  const p = proj();
+  const wrap = document.getElementById('dashWrap');
+  const tcs = p.testCases;
+  const total = tcs.length;
+  const passed = tcs.filter(t=>t.status==='Passed').length;
+  const failed = tcs.filter(t=>t.status==='Failed').length;
+  const blocked = tcs.filter(t=>t.status==='Blocked').length;
+  const notRun = total - passed - failed - blocked;
+  const coveragePct = p.requirements.length ? Math.round(p.requirements.filter(r=>p.testCases.some(t=>t.reqId===r.id)).length / p.requirements.length * 100) : 0;
+
+  let statHtml = `
+    <div class="stat-grid">
+      <div class="stat"><div class="v">${p.requirements.length}</div><div class="l">Requirements</div></div>
+      <div class="stat"><div class="v">${total}</div><div class="l">Test cases</div></div>
+      <div class="stat"><div class="v">${coveragePct}%</div><div class="l">Req. coverage</div></div>
+      <div class="stat"><div class="v">${p.bugs.filter(b=>b.status==='Open').length}</div><div class="l">Open bugs</div></div>
+    </div>`;
+
+  const segs = [
+    {label:'Passed', val:passed, color:'#178A76'},
+    {label:'Failed', val:failed, color:'#B4432E'},
+    {label:'Blocked', val:blocked, color:'#C77B21'},
+    {label:'Not run', val:notRun, color:'#D9D4C6'}
+  ];
+  const sum = total || 1;
+  let angle = 0;
+  const r=54, cx=64, cy=64;
+  let arcs = '';
+  segs.forEach(s=>{
+    const frac = s.val/sum;
+    const a0 = angle, a1 = angle + frac*2*Math.PI;
+    angle = a1;
+    if(s.val===0) return;
+    const x0 = cx + r*Math.sin(a0), y0 = cy - r*Math.cos(a0);
+    const x1 = cx + r*Math.sin(a1), y1 = cy - r*Math.cos(a1);
+    const large = (a1-a0) > Math.PI ? 1 : 0;
+    arcs += `<path d="M${cx},${cy} L${x0.toFixed(2)},${y0.toFixed(2)} A${r},${r} 0 ${large} 1 ${x1.toFixed(2)},${y1.toFixed(2)} Z" fill="${s.color}"></path>`;
+  });
+  const donut = `
+    <svg width="128" height="128" viewBox="0 0 128 128">
+      ${total ? arcs : '<circle cx="64" cy="64" r="54" fill="#D9D4C6"></circle>'}
+      <circle cx="64" cy="64" r="30" fill="var(--paper-2)"></circle>
+      <text x="64" y="68" text-anchor="middle" font-size="18" font-weight="700" fill="var(--ink)">${total}</text>
+    </svg>`;
+  const legend = segs.map(s=>`<div><span class="sw" style="background:${s.color}"></span>${s.label} — ${s.val}</div>`).join('');
+
+  // module bar chart
+  const byModule = {};
+  tcs.forEach(t=>{ byModule[t.module] = byModule[t.module]||{total:0,passed:0}; byModule[t.module].total++; if(t.status==='Passed') byModule[t.module].passed++; });
+  const maxTotal = Math.max(1, ...Object.values(byModule).map(m=>m.total));
+  let barsHtml = Object.entries(byModule).map(([mod,d])=>{
+    const w = Math.round(d.total/maxTotal*100);
+    const pw = d.total ? Math.round(d.passed/d.total*100) : 0;
+    return `<div style="margin-bottom:10px;">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;"><span>${escapeHtml(mod)}</span><span>${d.passed}/${d.total} passed</span></div>
+      <div style="background:#EDEBE2;border-radius:5px;height:10px;width:100%;overflow:hidden;">
+        <div style="background:var(--teal);height:100%;width:${pw}%;"></div>
+      </div>
+    </div>`;
+  }).join('') || '<p class="sub">No test cases yet.</p>';
+
+  wrap.innerHTML = statHtml + `
+    <div class="card">
+      <h3>Execution status</h3>
+      <div class="donut-wrap">
+        ${donut}
+        <div class="legend">${legend}</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Pass rate by module</h3>
+      ${barsHtml}
+    </div>
+  `;
+}
+
+/* ============================= DUPLICATE FLAGGING ============================= */
+function flagDuplicates(){
+  const p = proj();
+  const seen = {};
+  p.testCases.forEach(tc=>{ tc.dup = false; });
+  p.testCases.forEach(tc=>{
+    const key = tc.title.trim().toLowerCase();
+    if(seen[key]) { tc.dup = true; seen[key].dup = true; }
+    else seen[key] = tc;
+  });
+  renderAll();
+}
+
+/* ============================= EXPORTS ============================= */
+function toCsv(rows, headers){
+  const esc = v => `"${String(v??'').replace(/"/g,'""')}"`;
+  const lines = [headers.join(',')];
+  rows.forEach(r=> lines.push(headers.map(h=>esc(r[h])).join(',')));
+  return lines.join('\r\n');
+}
+function download(filename, content, mime){
+  const blob = new Blob([content], {type: mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+function safeFileName(s){ return (s||'project').replace(/[^a-z0-9\-_]+/gi,'_').toLowerCase(); }
+function exportTestCasesCsv(){
+  const p = proj();
+  const headers = ['id','reqId','module','feature','scenario','title','description','preconditions','priority','severity','testType','testData','steps','expected','actual','status','executedBy','executionDate','comments','automationCandidate'];
+  const csv = toCsv(p.testCases, headers);
+  download(safeFileName(p.name)+'_test_cases.csv', csv, 'text/csv');
+}
+function exportAdoCsv(){
+  const p = proj();
+  const rows = p.testCases.map(tc=>({
+    'Work Item Type':'Test Case',
+    'Title': tc.title,
+    'Steps': tc.steps,
+    'Expected Result': tc.expected,
+    'Priority': tc.priority==='High'?1:(tc.priority==='Medium'?2:3),
+    'Area Path': tc.module,
+    'Iteration Path': '',
+    'Assigned To': tc.executedBy,
+    'State': tc.status==='Passed'?'Closed':(tc.status==='Not Run'?'Design':'Active'),
+    'Tags': tc.testType,
+    'Automation Status': tc.automationCandidate==='Yes' ? 'Planned' : 'Not Automated'
+  }));
+  const headers = ['Work Item Type','Title','Steps','Expected Result','Priority','Area Path','Iteration Path','Assigned To','State','Tags','Automation Status'];
+  download(safeFileName(p.name)+'_azure_devops_import.csv', toCsv(rows, headers), 'text/csv');
+}
+function exportBugsCsv(){
+  const p = proj();
+  const headers = ['id','title','reqId','testCaseId','module','description','steps','expected','actual','severity','priority','status','assignedTo','reporter','dateReported'];
+  download(safeFileName(p.name)+'_bug_report.csv', toCsv(p.bugs, headers), 'text/csv');
+}
+function exportCurrentProjectJson(){
+  const p = proj();
+  download(safeFileName(p.name)+'_qa_bench_project.json', JSON.stringify({ singleProject: true, project: p }, null, 2), 'application/json');
+}
+function exportAllProjectsJson(){
+  download('qa_bench_all_projects.json', JSON.stringify(state, null, 2), 'application/json');
+}
+function loadProjectJson(file){
+  const reader = new FileReader();
+  reader.onload = e=>{
+    try{
+      const data = JSON.parse(e.target.result);
+      if(data.singleProject && data.project){
+        const id = slug();
+        state.projects[id] = data.project;
+        state.currentProject = id;
+      } else if(data.projects){
+        Object.assign(state.projects, data.projects);
+        state.currentProject = data.currentProject && state.projects[data.currentProject] ? data.currentProject : Object.keys(state.projects)[0];
+      } else if(data.requirements && data.testCases){
+        // legacy flat export from an earlier version of this tool
+        const id = slug();
+        state.projects[id] = { name:'Imported Project', requirements:data.requirements||[], testCases:data.testCases||[], bugs:data.bugs||[], reqSeq:data.reqSeq||1, tcSeq:data.tcSeq||1, bugSeq:data.bugSeq||1 };
+        state.currentProject = id;
+      } else {
+        alert('This file does not look like a QA Bench project export.');
+        return;
+      }
+      renderAll();
+    }catch(err){ alert('Could not read this file — is it a valid QA Bench project export?'); }
+  };
+  reader.readAsText(file);
+}
+
+/* ============================= WIRE UP ============================= */
+document.getElementById('btnExtract').onclick = ()=>{
+  const val = document.getElementById('importText').value;
+  if(!val.trim()) return;
+  extractRequirements(val);
+  document.getElementById('importText').value='';
+  activeTab = 'req';
+  renderAll();
+};
+document.getElementById('btnLoadSample').onclick = ()=>{ document.getElementById('importText').value = SAMPLE; };
+document.getElementById('btnClearImport').onclick = ()=>{ document.getElementById('importText').value=''; };
+document.getElementById('btnDedupe').onclick = flagDuplicates;
+document.getElementById('tcSearch').oninput = renderTestCases;
+['tcFilterModule','tcFilterType','tcFilterStatus'].forEach(id=> document.getElementById(id).onchange = renderTestCases );
+['execFilterModule','execFilterStatus'].forEach(id=> document.getElementById(id).onchange = renderExecution );
+document.getElementById('expTcCsv').onclick = exportTestCasesCsv;
+document.getElementById('expAdoCsv').onclick = exportAdoCsv;
+document.getElementById('expBugCsv').onclick = exportBugsCsv;
+document.getElementById('expJsonCurrent').onclick = exportCurrentProjectJson;
+document.getElementById('expJsonAll').onclick = exportAllProjectsJson;
+document.getElementById('loadJson').onchange = e=>{ if(e.target.files[0]) loadProjectJson(e.target.files[0]); };
+document.getElementById('apiKeyInput').oninput = e=>{ state.apiKey = e.target.value; };
+document.getElementById('geminiKeyInput').oninput = e=>{ state.geminiKey = e.target.value; };
+document.getElementById('aiProviderSelect').onchange = e=>{
+  state.aiProvider = e.target.value;
+  const isGemini = state.aiProvider === 'gemini';
+  document.getElementById('geminiKeyRow').style.display = isGemini ? '' : 'none';
+  document.getElementById('anthropicKeyRow').style.display = isGemini ? 'none' : '';
+  document.getElementById('providerHelp').textContent = isGemini
+    ? 'Get a free Gemini key at aistudio.google.com/apikey — sign in with Google, click "Create API key". No billing setup required.'
+    : 'Get a key at platform.claude.com — requires adding a payment method; there is no ongoing free tier.';
+};
+document.getElementById('btnTestAi').onclick = async ()=>{
+  const el = document.getElementById('aiTestStatus');
+  el.style.color = 'var(--slate)';
+  el.textContent = 'Testing…';
+  try{
+    const raw = await callAI('Reply with only the single word: OK');
+    el.style.color = 'var(--teal-dark)';
+    el.textContent = 'Connected — model responded: "' + raw.trim().slice(0,60) + '"';
+  }catch(err){
+    el.style.color = 'var(--rust)';
+    el.textContent = 'Failed: ' + err.message;
+  }
+};
+
+/* ============================= MASTER RENDER ============================= */
+function renderAll(){
+  renderProjectSelector();
+  renderTabs();
+  showView();
+  renderBanners();
+  if(activeTab==='projects') renderProjectsTab();
+  if(activeTab==='req') renderRequirements();
+  if(activeTab==='tc') renderTestCases();
+  if(activeTab==='exec') renderExecution();
+  if(activeTab==='bugs') renderBugs();
+  if(activeTab==='rtm') renderRtm();
+  if(activeTab==='dash') renderDash();
+}
+renderAll();
+</script>
+</body>
+</html>
